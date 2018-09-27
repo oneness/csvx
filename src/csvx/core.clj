@@ -21,7 +21,7 @@
         (line-tokenizer-ex-handler e line)
         nil))))
 
-(defn- line->transformer [line {:keys [line-tokenizer] :as opts}]
+(defn- line-transformer [line {:keys [line-tokenizer] :as opts}]
   (->> (line-tokenizer line opts)
        (map-indexed hash-map)))
 
@@ -29,7 +29,7 @@
   {:field-separator ","
    :max-lines-to-read Integer/MAX_VALUE
    :line-tokenizer line-tokenizer
-   :line-transformer line->transformer
+   :line-transformer line-transformer
    :line-tokenizer-ex-handler line-tokenizer-ex-handler
    :encoding "UTF-8"})
 
