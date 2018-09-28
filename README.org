@@ -13,7 +13,7 @@
     {:field-separator ","
      :max-lines-to-read Integer/MAX_VALUE
      :line-tokenizer line-tokenizer
-     :line-transformer line-transformer
+     :line-transformer line->transformer
      :line-tokenizer-ex-handler line-tokenizer-ex-handler
      :encoding "UTF-8"}
   #+end_src
