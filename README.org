@@ -21,9 +21,9 @@
      :line-transformer #(map-indexed hash-map %)}
     #+end_src
 
-# Say you have a giant json file that you need to parse into Clojure
-# map, all you need to do is to to write line tokenizer and
-# transformer like this:
+;; Say you have a giant json file that you need to parse into Clojure
+;; map, all you need to do is to to write line tokenizer and
+;; transformer like this:
 #+begin_src clojure :results silent_
 (defn decode-json [^String file-path]
   (readx file-path ;;"sample.json"
