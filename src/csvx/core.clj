@@ -41,10 +41,9 @@
                                (conj! acc transformed))
                              acc))]
     (loop [line (.readLine ^BufferedReader br)
-           result (transient [])]
+           result (accumulate-lines (transient []) line)]
       (if (or (nil? line) (zero? @lines-to-read))
         (do (close fis isr br)
-            (-> (accumulate-lines result line)
-                persistent!))
+            (persistent! result))
         (recur (.readLine ^BufferedReader br)
                (accumulate-lines result line))))))
