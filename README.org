@@ -1,6 +1,6 @@
 * CSVX
   A dependency-free tool that enables you to control how you
-  tokenize, transform and handle malformed char(s) separated values.
+  tokenize, transform and handle char(s) separated values.
 
 * Usage
   #+begin_src clojure :results silent
@@ -10,10 +10,13 @@
     ;; Note that csvx/readx takes optional arg where you can pass in following
     ;; options: (listed values here are defaults if no option is given See src/csvx/core.clj
     ;; for details).
-    {:field-separator ","
+    {:encoding "UTF-8"
      :max-lines-to-read Integer/MAX_VALUE
-     :line-tokenizer line-tokenizer
-     :line-transformer line->transformer
-     :line-tokenizer-ex-handler line-tokenizer-ex-handler
-     :encoding "UTF-8"}
-  #+end_src
+     :line-tokenizer (fn [^String line]
+		       (try (.split line ",")
+			    (catch Exception e
+			      (println :malformed-line line)
+			      ;; (strace/print-stack-trace e) ;; handle exception here
+                              nil)))
+     :line-transformer #(map-indexed hash-map %)}
+    #+end_src

@@ -8,56 +8,43 @@
 
 (set! *warn-on-reflection* true)
 
-(defn- line-tokenizer-ex-handler [^Exception e line]
-  (println :malformed-csv-line line)
-  (strace/print-stack-trace e))
-
-(defn- line-tokenizer [line & [{:keys [field-separator
-                                       line-tokenizer-ex-handler]}]]
-  (when (seq line)
-    (try
-      (.split ^String line field-separator)
-      (catch Exception e
-        (line-tokenizer-ex-handler e line)
-        nil))))
-
-(defn- line-transformer [line {:keys [line-tokenizer] :as opts}]
-  (->> (line-tokenizer line opts)
-       (map-indexed hash-map)))
-
 (def ^:private default-opts
-  {:field-separator ","
+  {:encoding "UTF-8"
    :max-lines-to-read Integer/MAX_VALUE
-   :line-tokenizer line-tokenizer
-   :line-transformer line-transformer
-   :line-tokenizer-ex-handler line-tokenizer-ex-handler
-   :encoding "UTF-8"})
+   :line-tokenizer (fn [^String line]
+                     (try (.split line ",")
+                          (catch Exception e
+                            (println :malformed-line line)
+                            (strace/print-stack-trace e))))
+   :line-transformer #(map-indexed hash-map %)})
 
-(defn- close [closables]
-  (doall (map (fn [c] (when c (.close ^Closeable c)))
-              closables)))
+(defn- close [ closeable & closables]
+  (doall (->> (cons closeable closables)
+              (map (fn [c] (when c (.close ^Closeable c)))))))
 
-(defn readx [file-path & [opts]]
+(defn readx [^String file-path & [opts]]
   "Intended to be used to read in large files."
   (let [options (merge default-opts opts)
         lines-to-read (atom  (:max-lines-to-read options))
-        line-separator (:line-separator options)
+        line-tokenizer (:line-tokenizer options)
         line-transformer (:line-transformer options)
         fis (FileInputStream. ^String file-path)
         isr (InputStreamReader. ^FileInputStream fis
                                 (or ^String (:encoding options) "UTF-8"))
         br (BufferedReader. ^InputStreamReader isr)
-        accumulate-lines (fn [line acc]
+        accumulate-lines (fn [acc line]
                            (if (seq line)
-                             (do (swap! lines-to-read dec)
-                                 (->> (line-transformer (.trim ^String line) options)
-                                      (conj! acc)))
+                             (let [transformed (-> (.trim ^String line)
+                                                   line-tokenizer
+                                                   line-transformer)]
+                               (swap! lines-to-read dec)
+                               (conj! acc transformed))
                              acc))]
     (loop [line (.readLine ^BufferedReader br)
            result (transient [])]
       (if (or (nil? line) (zero? @lines-to-read))
-        (do (close [fis isr br])
-            (-> (accumulate-lines line result)
+        (do (close fis isr br)
+            (-> (accumulate-lines result line)
                 persistent!))
         (recur (.readLine ^BufferedReader br)
-               (accumulate-lines line result))))))
+               (accumulate-lines result line))))))
