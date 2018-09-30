@@ -1,11 +1,18 @@
 * CSVX
   A dependency-free tool that enables you to control how you
-  tokenize, transform and handle char(s) separated values.
+  tokenize, transform and handle files with char(s) separated values.
 
 * Usage
+Not sure if I am going to publish this to Clojars but if you are using
+[[https://clojure.org/guides/getting_started][tools.deps]], you can just add following to deps.edn to add it to your project.
   #+begin_src clojure :results silent
+    {:deps
+      {github-oneness/csvx
+        {:git/url "https://github.com/oneness/csvx"
+         :sha "3f340c4ae2969b4b171acb07ba798a293cce5b49"}}}
+    ;; Then require from your repl like this:
     (require '[csvx.core :as csvx])
-    ;; Then you can use the defaults to parse csv files like this:
+    ;; You can just use the one public fn `readx` without any options to parse csv:
     (csvx/readx "resources/100-sales-records.csv")
     ;; Note that csvx/readx takes optional arg where you can pass in following
     ;; options: (listed values here are defaults if no option is given See src/csvx/core.clj
@@ -21,9 +28,11 @@
      :line-transformer #(map-indexed hash-map %)}
     #+end_src
 
-;; Say you have a giant json file that you need to parse into Clojure
-   map, all you need to do is to to write line tokenizer and
-   transformer like this:
+Say you have a giant json file that you need to parse into Clojure
+map, all you need to do is to to write line tokenizer and transformer
+like this to get it working from repl. Remember to pass in how many
+lines you want to read in while you are experimenting with your repl
+as not to blow it up:
 #+begin_src clojure :results silent_
 (defn decode-json [^String file-path]
   (readx file-path ;;"sample.json"
