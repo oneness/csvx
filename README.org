@@ -1,5 +1,5 @@
 * CSVX
-  A dependency-free tool that enables you to control how you
+  A dependency-free tool that enables you to control how to
   tokenize, transform and handle files with char(s) separated values.
 
 * Usage
@@ -9,7 +9,7 @@ Not sure if I am going to publish this to Clojars but if you are using
     {:deps
       {github-oneness/csvx
         {:git/url "https://github.com/oneness/csvx"
-         :sha "3f340c4ae2969b4b171acb07ba798a293cce5b49"}}}
+         :sha "be8de6765ed052404eb08844443a43cd83e7dcaa"}}}
     ;; Then require from your repl like this:
     (require '[csvx.core :as csvx])
     ;; You can just use the one public fn `readx` without any options to parse csv:
