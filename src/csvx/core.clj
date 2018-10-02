@@ -25,13 +25,13 @@
 (defn readx [^String file-path & [opts]]
   "Intended to be used to read in large files."
   (let [options (merge default-opts opts)
+        encoding (or ^String (:encoding options)
+                     "UTF-8")
         lines-to-read (atom  (:max-lines-to-read options))
         line-tokenizer (:line-tokenizer options)
         line-transformer (:line-transformer options)
-        fis (FileInputStream. ^String file-path)
-        isr (InputStreamReader. ^FileInputStream fis
-                                (or ^String (:encoding options) "UTF-8"))
-        br (BufferedReader. ^InputStreamReader isr)
+        br (-> file-path FileInputStream. (InputStreamReader. encoding)
+               BufferedReader.)
         accumulate-lines (fn [acc line]
                            (if (seq line)
                              (let [transformed (-> (.trim ^String line)
@@ -40,10 +40,10 @@
                                (swap! lines-to-read dec)
                                (conj! acc transformed))
                              acc))]
-    (loop [line (.readLine ^BufferedReader br)
-           result (accumulate-lines (transient []) line)]
+    (loop [line (.readLine br)
+           result (transient [])]
       (if (or (nil? line) (zero? @lines-to-read))
-        (do (close fis isr br)
+        (do (close br)
             (persistent! result))
-        (recur (.readLine ^BufferedReader br)
+        (recur (.readLine br)
                (accumulate-lines result line))))))

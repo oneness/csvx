@@ -34,17 +34,17 @@ like this to get it working from repl. Remember to pass in how many
 lines you want to read in while you are experimenting with your repl
 as not to blow it up:
 #+begin_src clojure :results silent_
-(defn decode-json [^String file-path]
-  (readx file-path ;;"sample.json"
-         {:max-lines-to-read 1
-          :line-tokenizer (fn [line]
-                            (map #(.split ^String % ":")
-                                 (-> (clojure.string/replace line #"\{|\}" "")
-                                     (.split ","))))
-          :line-transformer (fn [line]
-                              (reduce (fn [acc [f s]]
-                                        (merge acc {(keyword (read-string f))
-                                                    (read-string s)}))
-                                      {}
-                                      line))}))
+  (defn decode-json [^String file-path]
+    (readx file-path ;;"sample.json"
+	   {:max-lines-to-read 1
+	    :line-tokenizer (fn [line]
+			      (map #(.split ^String % ":")
+				   (-> (clojure.string/replace line #"\{|\}" "")
+				       (.split ","))))
+	    :line-transformer (fn [line]
+				(reduce (fn [acc [k v]]
+					  (merge acc
+						 {(-> k read-string keyword) (read-string v)}))
+					{}
+					line))}))
 #+end_src
