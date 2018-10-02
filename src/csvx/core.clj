@@ -34,11 +34,10 @@
                BufferedReader.)
         accumulate-lines (fn [acc line]
                            (if (seq line)
-                             (let [transformed (-> (.trim ^String line)
-                                                   line-tokenizer
-                                                   line-transformer)]
-                               (swap! lines-to-read dec)
-                               (conj! acc transformed))
+                             (do (swap! lines-to-read dec)
+                                 (conj! acc (-> (.trim ^String line)
+                                                line-tokenizer
+                                                line-transformer)))
                              acc))]
     (loop [line (.readLine br)
            result (transient [])]
