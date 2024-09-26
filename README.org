@@ -48,3 +48,11 @@ as not to blow it up:
 					{}
 					line))}))
 #+end_src
+
+* Develop
+#+begin_src bash
+git clone https://github.com/oneness/csvx
+clojure -X:test
+#+end_src
+
+
