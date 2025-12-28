@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>csvx CLJS Browser Tests</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    #test-results {
+      background: white;
+      padding: 20px;
+      border-radius: 4px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .test-pass {
+      color: green;
+    }
+    .test-fail {
+      color: red;
+    }
+    .test-error {
+      color: orange;
+    }
+    .summary {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 2px solid #ddd;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>csvx CLJS Browser Tests</h1>
+  <div id="test-results">Running tests...</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/cljs-bootstrap@1.0.0/target/cljs_bootstrap.js"></script>
+  <script>
+    // Custom test reporter for browser
+    window.reporter = {
+      pass: function(msg) {
+        console.log('PASS:', msg);
+        var div = document.createElement('div');
+        div.className = 'test-pass';
+        div.textContent = '✓ ' + msg;
+        document.getElementById('test-results').appendChild(div);
+      },
+      fail: function(msg) {
+        console.error('FAIL:', msg);
+        var div = document.createElement('div');
+        div.className = 'test-fail';
+        div.textContent = '✗ ' + msg;
+        document.getElementById('test-results').appendChild(div);
+      },
+      error: function(msg) {
+        console.error('ERROR:', msg);
+        var div = document.createElement('div');
+        div.className = 'test-error';
+        div.textContent = '! ' + msg;
+        document.getElementById('test-results').appendChild(div);
+      },
+      summary: function(passed, failed, errors) {
+        var div = document.createElement('div');
+        div.className = 'summary';
+        div.textContent = 'Results: ' + passed + ' passed, ' + failed + ' failed, ' + errors + ' errors';
+        document.getElementById('test-results').appendChild(div);
+      }
+    };
+  </script>
+  <script type="text/javascript">
+    // Load and compile the test file
+    CLJS.bootstrap(function(require) {
+      // Since we're using cljs.main for compilation, this will work differently
+      // For now, just show a message
+      document.getElementById('test-results').innerHTML =
+        '<p>To run browser tests, use: <code>clojure -M:test-browser</code> and open the generated HTML file.</p>';
+    });
+  </script>
+</body>
+</html>

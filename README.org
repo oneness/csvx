@@ -2,6 +2,8 @@
   A dependency-free tool that enables you to control how to
   tokenize, transform and handle files with char(s) separated values.
 
+  Works in Clojure, ClojureScript in node and browser environments.
+
 * Usage
 Not sure if I am going to publish this to Clojars but if you are using
 [[https://clojure.org/guides/getting_started][tools.deps]], you can just add following to deps.edn to add it to your project.
@@ -9,7 +11,7 @@ Not sure if I am going to publish this to Clojars but if you are using
     {:deps
       {github-oneness/csvx
         {:git/url "https://github.com/oneness/csvx"
-         :sha "4d4ac868a0c6bdf9a5a6c32076303f1171c74db4"}}}
+         :sha "LATEST_COMMIT_SHA"}}}
     ;; Then require from your repl like this:
     (require '[csvx.core :as csvx])
     ;; You can just use the one public fn `readx` without any options to parse csv:
@@ -18,41 +20,117 @@ Not sure if I am going to publish this to Clojars but if you are using
     ;; options: (listed values here are defaults if no option is given See src/csvx/core.clj
     ;; for details).
     {:encoding "UTF-8"
-     :max-lines-to-read Integer/MAX_VALUE
-     :line-tokenizer (fn [^String line]
-		       (try (.split line ",")
-			    (catch Exception e
-			      (println :malformed-line line)
-			      ;; (strace/print-stack-trace e) ;; handle exception here
-                              nil)))
+     :max-lines-to-read Integer/MAX_VALUE  ;; or Number.MAX_SAFE_INTEGER in CLJS
+     :line-tokenizer #(.split ^String (str %) ",")
      :line-transformer #(map-indexed hash-map %)}
     #+end_src
 
+**Clojure (CLJ) Usage:**
+
+#+begin_src clojure :results silent
+  (require '[csvx.core :as csvx])
+
+  ;; Read a CSV file - returns data directly
+  (csvx/readx "data.csv")
+  ;; => [[{0 "name"} {1 "age"} {2 "gender"}]
+  ;;     [{0 "John"} {1 "32"} {2 "M"}]
+  ;;     [{0 "Susan"} {1 "28"} {2 "F"}]]
+
+  ;; Read with options
+  (csvx/readx "data.csv"
+              {:encoding "UTF-8"
+               :max-lines-to-read 100
+               :line-tokenizer #(.split ^String (str %) ",")
+               :line-transformer #(map-indexed hash-map %)})
+#+end_src
+
+**ClojureScript (CLJS) Usage:**
+
+CLJS usage returns a Promise and supports multiple input types:
+
+*** Node.js:**
+
+#+begin_src clojure :results silent
+  (require '[csvx.core :as csvx])
+
+  ;; Read from file path - returns Promise
+  (-> (csvx/readx "data.csv")
+      (.then (fn [data]
+               (js/console.log data)))
+      (.catch (fn [err]
+                (js/console.error err))))
+#+end_src
+
+*** Browser:**
+
+#+begin_src clojure :results silent
+  ;; From File object (e.g., <input type="file">)
+  (-> (csvx/readx file-obj)
+      (.then (fn [data]
+               (js/console.log data))))
+
+  ;; From URL
+  (-> (csvx/readx "https://example.com/data.csv")
+      (.then (fn [data]
+               (js/console.log data))))
+#+end_src
+
+**Custom Tokenizers and Transformers:**
+
 Say you have a giant json file that you need to parse into Clojure
-map, all you need to do is to to write line tokenizer and transformer
+map, all you need to do is to write line tokenizer and transformer
 like this to get it working from repl. Remember to pass in how many
 lines you want to read in while you are experimenting with your repl
 as not to blow it up:
-#+begin_src clojure :results silent_
+#+begin_src clojure :results silent
   (defn decode-json [^String file-path]
-    (readx file-path ;;"sample.json"
-	   {:max-lines-to-read 1
-	    :line-tokenizer (fn [line]
-			      (map #(.split ^String % ":")
-				   (-> (clojure.string/replace line #"\{|\}" "")
-				       (.split ","))))
-	    :line-transformer (fn [line]
-				(reduce (fn [acc [k v]]
-					  (merge acc
-						 {(-> k read-string keyword) (read-string v)}))
-					{}
-					line))}))
+    (readx file-path
+           {:max-lines-to-read 1
+            :line-tokenizer (fn [line]
+                              (map #(.split ^String % ":")
+                                   (-> (clojure.string/replace line #"\{|\}" "")
+                                       (.split ","))))
+            :line-transformer (fn [line]
+                                (reduce (fn [acc [k v]
+                                          (merge acc
+                                                 {(-> k read-string keyword) (read-string v)}))
+                                        {}
+                                        line))}))
 #+end_src
+
+* Options
+
+- =:encoding= - File encoding (default: ="UTF-8"=)
+- =:max-lines-to-read= - Maximum number of lines to read (default: =Integer/MAX_VALUE= in CLJ, =Number.MAX_SAFE_INTEGER= in CLJS)
+- =:line-tokenizer= - Function to split line into fields (default: comma split)
+- =:line-transformer= - Function to transform tokenized line (default: map-indexed hash-map)
+
+* Return Values
+
+- **CLJ**: Returns data directly (vector of lines)
+- **CLJS**: Returns a Promise that resolves to the data
 
 * Develop
+
 #+begin_src bash
 git clone https://github.com/oneness/csvx
+cd csvx
+
+# Run CLJ tests
 clojure -X:test
+
+# Run CLJS Node tests
+clojure -X:test-node
+
+# Run CLJS Browser tests (compiles and opens browser)
+clojure -X:test-browser
 #+end_src
 
+* Features
 
+- Works in both Clojure and ClojureScript
+- No dependencies (plain JS interop for CLJS)
+- Custom tokenizers for any delimiter-separated format
+- Custom transformers for flexible output formats
+- Browser support for File objects and URLs
+- Configurable line limits for memory-efficient processing

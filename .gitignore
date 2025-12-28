@@ -12,3 +12,11 @@ pom.xml.asc
 .lein-failures
 .nrepl-port
 .cpcache/
+
+# CLJS generated files
+test/out/
+test/public/js/
+test/public/*.html
+test/*.cljs.cache.json
+test/*.js.map
+.claude/settings.local.json
