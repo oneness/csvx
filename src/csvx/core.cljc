@@ -2,36 +2,34 @@
   "Character-separated values parser and transformer that gives user fine-grained
   control. In CLJ returns data directly. In CLJS returns a Promise."
   #?(:clj (:import
-            (java.io Closeable InputStreamReader BufferedReader FileInputStream))))
+            (java.io InputStreamReader BufferedReader FileInputStream))))
 
 #?(:clj (set! *warn-on-reflection* true))
 
+;; Constants
+(def ^:private ^:const default-separator ",")
+(def ^:private ^:const default-encoding "UTF-8")
+(def ^:private ^:const line-separator "\n")
+
 ;; Default options
 (def ^:private default-opts
-  {:encoding "UTF-8"
+  {:encoding default-encoding
    :max-lines-to-read #?(:clj Integer/MAX_VALUE
                          :cljs js/Number.MAX_SAFE_INTEGER)
-   :line-tokenizer #(.split ^String (str %) ",")
+   :separator default-separator
+   :line-tokenizer #(.split #?(:clj ^String (str %) :cljs (str %)) default-separator)
    :line-transformer #(map-indexed hash-map %)})
 
 ;; Shared implementation
-#?(:clj
-   (defn- accumulate-lines
-     [lines-remaining line-tokenizer line-transformer acc line]
-     (if (seq line)
-       (let [trimmed (.trim ^String line)]
-         [(conj! acc (-> trimmed line-tokenizer line-transformer))
-          (dec lines-remaining)])
-       [acc lines-remaining])))
-
-#?(:cljs
-   (defn- accumulate-lines
-     [lines-remaining line-tokenizer line-transformer acc line]
-     (if (seq line)
-       (let [trimmed (.trim line)]
-         [(conj! acc (-> trimmed line-tokenizer line-transformer))
-          (dec lines-remaining)])
-       [acc lines-remaining])))
+(defn- accumulate-lines
+  "Process a single line: tokenize, transform, and add to accumulator.
+  Returns [updated-acc lines-remaining]."
+  [lines-remaining line-tokenizer line-transformer acc line]
+  (if (seq line)
+    (let [trimmed (.trim #?(:clj ^String line :cljs line))]
+      [(conj! acc (-> trimmed line-tokenizer line-transformer))
+       (dec lines-remaining)])
+    [acc lines-remaining]))
 
 #?(:clj
    (defn- read-lines-from-file
@@ -69,6 +67,7 @@
 ;; CLJS Implementation
 #?(:cljs
    (defn- process-lines
+     "Process array of lines using opts, returning persistent vector of results."
      [lines opts]
      (loop [result (transient [])
             idx 0
@@ -86,15 +85,17 @@
 ;; Node.js implementation
 #?(:cljs
    (defn- read-node-sync
+     "Read file synchronously in Node.js environment."
      [file-path opts]
      (let [fs (js/require "fs")
            content (.readFileSync fs file-path (clj->js {:encoding (:encoding opts)}))
-           lines (.split content "\n")]
+           lines (.split content line-separator)]
        (process-lines lines opts))))
 
 ;; Browser File object implementation
 #?(:cljs
    (defn- read-file-object
+     "Read a browser File object, returning a Promise."
      [file-obj opts]
      (js/Promise.
       (fn [resolve reject]
@@ -102,7 +103,7 @@
           (set! (.-onload reader)
                 (fn [e]
                   (let [content (.. e -target -result)
-                        lines (.split content "\n")]
+                        lines (.split content line-separator)]
                     (resolve (process-lines lines opts)))))
           (set! (.-onerror reader)
                 (fn [e]
@@ -112,6 +113,7 @@
 ;; Browser URL/fetch implementation
 #?(:cljs
    (defn- read-url
+     "Fetch and parse CSV from a URL, returning a Promise."
      [url opts]
      (-> (js/fetch url)
          (.then (fn [response]
@@ -120,12 +122,13 @@
                     (js/Promise.reject (ex-info "Failed to fetch URL"
                                                  {:status (.-status response)})))))
          (.then (fn [text]
-                  (let [lines (.split text "\n")]
+                  (let [lines (.split text line-separator)]
                     (process-lines lines opts)))))))
 
 ;; Input detection helpers
 #?(:cljs
    (defn- file-object? [x]
+     "Check if x is a browser File object (has name, size, and either type or text method)."
      (and (some? x)
           (not (string? x))
           (some? (.-name x))
@@ -135,12 +138,14 @@
 
 #?(:cljs
    (defn- url? [x]
+     "Check if x is an HTTP/HTTPS URL string."
      (and (string? x)
           (or (.startsWith x "http://")
               (.startsWith x "https://")))))
 
 #?(:cljs
    (defn- detect-input-type [input]
+     "Detect the type of input: :file-object, :url, :file-path, or :unknown."
      (cond
        (file-object? input) :file-object
        (url? input)         :url
