@@ -1,0 +1,5 @@
+{:paths ["src" "test"]
+ :tasks {test {:doc "Run tests with babashka"
+              :task (do
+                      (require '[csvx.core-test :as c])
+                      (clojure.test/run-tests 'csvx.core-test))}}}

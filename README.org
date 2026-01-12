@@ -2,7 +2,7 @@
   A dependency-free tool that enables you to control how to
   tokenize, transform and handle files with char(s) separated values.
 
-  Works in Clojure, ClojureScript in node and browser environments.
+  Works in Clojure, ClojureScript (Node.js and browser), and Babashka.
 
 * Usage
 Not sure if I am going to publish this to Clojars but if you are using
@@ -75,6 +75,32 @@ CLJS usage returns a Promise and supports multiple input types:
                (js/console.log data))))
 #+end_src
 
+**Babashka Usage:**
+
+Babashka is a native Clojure interpreter for scripting with fast startup.
+csvx works with Babashka out of the box with no modifications needed.
+
+Example script (=script.bb=):
+
+#+begin_src clojure :results silent
+  #!/usr/bin/env bb
+
+  (require '[csvx.core :as csvx])
+
+  ;; Read a CSV file - returns data directly
+  (def data (csvx/readx "data.csv"))
+
+  ;; Process the data
+  (prn (count data) "rows read")
+  (prn (first data))
+#+end_src
+
+To use csvx in a Babashka script, place =src/csvx/core.cljc= on your classpath:
+
+#+begin_src bash
+  bb --classpath src script.bb
+#+end_src
+
 **Custom Tokenizers and Transformers:**
 
 Following example shows that you can pass in `line-tokenizer` and
@@ -107,6 +133,7 @@ Following example shows that you can pass in `line-tokenizer` and
 
 - **CLJ**: Returns data directly (vector of lines)
 - **CLJS**: Returns a Promise that resolves to the data
+- **Babashka**: Returns data directly (same as CLJ)
 
 * Develop
 
@@ -122,13 +149,38 @@ clojure -X:test-node
 
 # Run CLJS Browser tests (compiles and opens browser)
 clojure -X:test-browser
+
+# Run Babashka tests
+bb test
 #+end_src
 
 * Features
 
-- Works in both Clojure and ClojureScript
+- Works in Clojure, ClojureScript (Node.js and browser), and Babashka
 - No dependencies (plain JS interop for CLJS)
 - Custom tokenizers for any delimiter-separated format
 - Custom transformers for flexible output formats
 - Browser support for File objects and URLs
 - Configurable line limits for memory-efficient processing
+- Babashka compatible - use in scripts for fast CSV processing
+- Comprehensive test coverage across all platforms (CLJ, Node, Browser, Babashka)
+
+* Performance: CLJ vs Babashka
+
+Babashka is significantly faster for scripting and CLI usage due to its native binary and instant startup:
+
+| Platform | Cold Start | Warm Start |
+|----------|------------|------------|
+| CLJ (JVM) | ~3.9s | ~1.0s |
+| Babashka | ~0.14s | ~0.025s |
+
+- **Cold start:** Babashka is ~27x faster
+- **Warm start:** Babashka is ~40x faster
+
+**Important caveat:** These benchmarks test a small workload (2 tests, simple CSV parsing).
+Results should be taken with a grain of salt:
+
+- JVM Clojure's JIT compiler can outperform Babashka for CPU-intensive, long-running tasks
+- Babashka's advantage is primarily startup time, not execution speed
+- Actual performance depends on workload size, I/O vs CPU operations, and use case
+- For large-scale data processing or long-running applications, JVM Clojure may be more suitable
